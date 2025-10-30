@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('number_bus')->unique();
             $table->foreignId('car_brand_id')->constrained('car_brands');
-            $table->foreignId('driver_id')->nullable()->constrained('drivers');
+            $table->foreignId('driver_id')->nullable()->constrained('drivers')->onDelete('set null');
             $table->timestamps();
         });
     }

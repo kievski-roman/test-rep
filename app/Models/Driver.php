@@ -2,11 +2,24 @@
 
 namespace App\Models;
 
+use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Driver extends Model
 {
-    protected $fillable = ['first_name', 'last_name', 'birth_date', 'photo'];
+    use CrudTrait, SoftDeletes;
+    protected $fillable = [
+        'first_name',
+        'last_name',
+        'birth_date',
+        'photo',
+        'salary',
+        'email',
+        'is_active'
+    ];
+
+
 
     protected $casts = ['photo' => 'array', 'birth_date' => 'date'];
 
@@ -31,13 +44,4 @@ class Driver extends Model
         return ucfirst($value);
     }
 
-    public static function boot()
-    {
-        parent::boot();
-        static::saving(function ($driver) {
-            if ($driver->birth_date->age > 65) {
-                throw new \Exception('Водій не може бути старше 65 років');
-            }
-        });
-    }
 }
