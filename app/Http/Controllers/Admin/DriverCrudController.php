@@ -14,7 +14,7 @@ class DriverCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    /** флаг режима “колишні” */
+   
     protected function isFormer(): bool
     {
         return request()->boolean('former');
@@ -26,21 +26,19 @@ class DriverCrudController extends CrudController
         CRUD::setRoute(config('backpack.base.route_prefix') . '/driver');
         CRUD::setEntityNameStrings('водій', 'Водії');
 
-        // не запоминаем последний URL и фильтры (чтобы ?former=1 не прилипал)
+
         $this->crud->setOperationSetting('persistentTable', false);
         $this->crud->setOperationSetting('persistFilters', false);
 
         if ($this->isFormer()) {
-            // (опционально) доступ только admin/manager
             if ($user = backpack_auth()->user() ?? auth()->user()) {
                 if (!in_array($user->role, ['admin','manager'], true)) {
                     abort(403);
                 }
             }
 
-            // показываем только soft-deleted
             $this->crud->query->onlyTrashed();
-            // чтобы Show мог находить soft-deleted
+
             $this->crud->addClause('withTrashed');
 
             CRUD::denyAccess(['create','update','delete']);
@@ -49,7 +47,6 @@ class DriverCrudController extends CrudController
             $this->crud->setHeading('Колишні водії');
             $this->crud->setSubheading('Список звільнених (soft-deleted)', 'list');
         } else {
-            // обычный список — без удалённых
             $this->crud->query->withoutTrashed();
         }
     }
@@ -78,11 +75,11 @@ class DriverCrudController extends CrudController
         CRUD::field('salary')->type('number')->attributes(['step' => '0.01'])->label('Salary');
         CRUD::field('email')->type('email')->label('Email');
 
-        // images должен быть table/repeatable, а не textarea
+
         CRUD::addField([
             'name'    => 'images',
             'label'   => 'Images',
-            'type'    => 'table', // или 'repeatable'
+            'type'    => 'table', 
             'columns' => [
                 'text' => 'Text',
                 'src'  => 'Src (URL)',
@@ -91,7 +88,7 @@ class DriverCrudController extends CrudController
             'max' => 0,
         ]);
 
-        // после сохранения — на обычный список (без former)
+
         $this->crud->setOperationSetting('redirectAfterSave', backpack_url('driver'));
     }
 
@@ -105,6 +102,5 @@ class DriverCrudController extends CrudController
         if ($this->isFormer()) {
             $this->crud->query->withTrashed();
         }
-        // при желании — определить колонки для show
     }
 }
