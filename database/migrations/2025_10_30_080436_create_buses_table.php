@@ -14,8 +14,13 @@ return new class extends Migration
         Schema::create('buses', function (Blueprint $table) {
             $table->id();
             $table->string('number_bus')->unique();
-            $table->foreignId('car_brand_id')->constrained('car_brands');
-            $table->foreignId('driver_id')->nullable()->constrained('drivers')->onDelete('set null');
+            $table->foreignId('car_brand_id')
+                ->constrained('car_brands')
+                ->cascadeOnDelete();
+            $table->foreignId('driver_id')
+                ->nullable()
+                ->constrained('drivers')
+                ->nullOnDelete();
             $table->timestamps();
         });
     }

@@ -2,26 +2,28 @@
 
 namespace App\Jobs;
 
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\FarewellEmail;
 
 class SendFarewellEmail implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
+    public array $payload;
+
+    public function __construct(array $payload)
     {
-        //
+        $this->payload = $payload;
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        //
+        Mail::to($this->payload['email'])
+            ->send(new FarewellEmail($this->payload['name']));
     }
 }

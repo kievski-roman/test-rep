@@ -16,7 +16,10 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('last_name');
             $table->date('birth_date');
-            $table->json('photo')->nullable();
+            $table->decimal('salary', 12, 2);
+            $table->string('email')->unique();
+            $table->json('images')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

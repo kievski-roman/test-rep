@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Jobs\SendFarewellEmail;
 use App\Models\Driver;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
@@ -42,7 +43,7 @@ class DriverCrudController extends CrudController
         CRUD::column('first_name')->label('First Name');
         CRUD::column('last_name')->label('Last Name');
         CRUD::column('birth_date')->label('Birth Date');
-        CRUD::column('salary')->label('Salary')->type('number');
+        CRUD::column('salary')->type('number')->label('Salary');
         CRUD::column('email')->label('Email');
     }
 
@@ -54,36 +55,48 @@ class DriverCrudController extends CrudController
      */
     protected function setupCreateOperation()
     {
-        CRUD::setValidation([
-            'first_name' => 'required|min:2',
-            'last_name' => 'required|min:2',
-            'birth_date' => 'required|date|after:-65 years',
-            'salary' => 'required|numeric|min:0',
-            'email' => 'required|email',
-        ]);
+        CRUD::setValidation(\App\Http\Requests\DriverRequest::class);
 
         CRUD::field('first_name')->label('First Name');
         CRUD::field('last_name')->label('Last Name');
-        CRUD::field('birth_date')->label('Birth Date')->type('date');
-        CRUD::field('salary')->label('Salary')->type('number')
-            ->attributes(['step' => '0.01']);
-        CRUD::field('email')->label('Email')->type('email');
+        CRUD::field('birth_date')->type('date')->label('Birth Date');
+        CRUD::field('salary')->type('number')->attributes(['step'=>'0.01'])->label('Salary');
+        CRUD::field('email')->type('email')->label('Email');
+
+        CRUD::addField([
+            'name'   => 'images',
+            'label'  => 'Images',
+            'type'  => 'textarea',
+            'entity_singular' => 'row',
+            'columns' => [
+                'text' => 'Text',
+                'src'  => 'Src (URL)',
+            ],
+            'max' => 0,
+            'min' => 0,
+        ]);
     }
     public function formerDrivers()
     {
-        CRUD::setModel(Driver::class);
-        CRUD::setRoute('admin/former-drivers');
-        CRUD::setEntityNameStrings('бывший водитель', 'бывшие водители');
+        CRUD::setModel(\App\Models\Driver::class);
+        CRUD::setRoute(config('backpack.base.route_prefix') . '/former-drivers');
+        CRUD::setEntityNameStrings('Former driver', 'Former drivers');
 
-        CRUD::addClause('where', 'is_active', false);
 
-        CRUD::column('first_name')->label('First Name');
-        CRUD::column('last_name')->label('Last Name');
-        CRUD::column('birth_date')->label('Birth Date');
-        CRUD::column('email')->label('Email');
+        $this->crud->addClause('onlyTrashed');
+
+        $this->crud->setColumns([
+            ['name'=>'first_name','label'=>'First Name'],
+            ['name'=>'last_name','label'=>'Last Name'],
+            ['name'=>'birth_date','label'=>'Birth Date'],
+            ['name'=>'email','label'=>'Email'],
+        ]);
 
         return view('crud::list', ['crud' => $this->crud]);
     }
+
+
+
 
     /**
      * Define what happens when the Update operation is loaded.
@@ -95,5 +108,7 @@ class DriverCrudController extends CrudController
     {
         $this->setupCreateOperation();
     }
+
+
 
 }

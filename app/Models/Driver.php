@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\SendFarewellEmail;
 use Backpack\CRUD\app\Models\Traits\CrudTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,15 +14,14 @@ class Driver extends Model
         'first_name',
         'last_name',
         'birth_date',
-        'photo',
+        'images',
         'salary',
-        'email',
-        'is_active'
+        'email'
     ];
 
 
 
-    protected $casts = ['photo' => 'array', 'birth_date' => 'date'];
+    protected $casts = ['images' => 'array', 'birth_date' => 'date'];
 
     public function setFirstNameAttribute($value)
     {
@@ -42,6 +42,22 @@ class Driver extends Model
     public function getLastNameAttribute($value)
     {
         return ucfirst($value);
+    }
+    public function scopeActive($q) { return $q->whereNull('deleted_at'); }
+    public function scopeFormer($q) { return $q->onlyTrashed(); }
+    public function bus()
+    {
+        return $this->hasOne(Bus::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::deleted(function (Driver $driver) {
+            SendFarewellEmail::dispatch([
+                'email' => $driver->email,
+                'name'  => $driver->first_name.' '.$driver->last_name,
+            ])->delay(now()->addSeconds(5));
+        });
     }
 
 }
