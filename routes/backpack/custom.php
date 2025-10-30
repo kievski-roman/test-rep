@@ -19,8 +19,6 @@ Route::group([
     Route::crud('car-brand', 'CarBrandCrudController');
     Route::crud('driver', 'DriverCrudController');
     Route::crud('bus', 'BusCrudController');
-    Route::get('former-drivers', [\App\Http\Controllers\Admin\DriverCrudController::class, 'formerDrivers'])
-        ->name('driver.former');
 }); // this should be the absolute last line of this file
 
 /**

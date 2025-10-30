@@ -2,16 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Jobs\SendFarewellEmail;
 use App\Models\Driver;
 use Backpack\CRUD\app\Http\Controllers\CrudController;
 use Backpack\CRUD\app\Library\CrudPanel\CrudPanelFacade as CRUD;
 
-/**
- * Class DriverCrudController
- * @package App\Http\Controllers\Admin
- * @property-read \Backpack\CRUD\app\Library\CrudPanel\CrudPanel $crud
- */
 class DriverCrudController extends CrudController
 {
     use \Backpack\CRUD\app\Http\Controllers\Operations\ListOperation;
@@ -20,39 +14,60 @@ class DriverCrudController extends CrudController
     use \Backpack\CRUD\app\Http\Controllers\Operations\DeleteOperation;
     use \Backpack\CRUD\app\Http\Controllers\Operations\ShowOperation;
 
-    /**
-     * Configure the CrudPanel object. Apply settings to all operations.
-     *
-     * @return void
-     */
-    public function setup()
+    /** флаг режима “колишні” */
+    protected function isFormer(): bool
+    {
+        return request()->boolean('former');
+    }
+
+    public function setup(): void
     {
         CRUD::setModel(Driver::class);
         CRUD::setRoute(config('backpack.base.route_prefix') . '/driver');
-        CRUD::setEntityNameStrings('driver', 'drivers');
+        CRUD::setEntityNameStrings('водій', 'Водії');
+
+        // не запоминаем последний URL и фильтры (чтобы ?former=1 не прилипал)
+        $this->crud->setOperationSetting('persistentTable', false);
+        $this->crud->setOperationSetting('persistFilters', false);
+
+        if ($this->isFormer()) {
+            // (опционально) доступ только admin/manager
+            if ($user = backpack_auth()->user() ?? auth()->user()) {
+                if (!in_array($user->role, ['admin','manager'], true)) {
+                    abort(403);
+                }
+            }
+
+            // показываем только soft-deleted
+            $this->crud->query->onlyTrashed();
+            // чтобы Show мог находить soft-deleted
+            $this->crud->addClause('withTrashed');
+
+            CRUD::denyAccess(['create','update','delete']);
+            CRUD::allowAccess('show');
+
+            $this->crud->setHeading('Колишні водії');
+            $this->crud->setSubheading('Список звільнених (soft-deleted)', 'list');
+        } else {
+            // обычный список — без удалённых
+            $this->crud->query->withoutTrashed();
+        }
     }
 
-    /**
-     * Define what happens when the List operation is loaded.
-     *
-     * @see  https://backpackforlaravel.com/docs/crud-operation-list-entries
-     * @return void
-     */
     protected function setupListOperation()
     {
-        CRUD::column('first_name')->label('First Name');
-        CRUD::column('last_name')->label('Last Name');
-        CRUD::column('birth_date')->label('Birth Date');
-        CRUD::column('salary')->type('number')->label('Salary');
-        CRUD::column('email')->label('Email');
+        $columns = [
+            ['name' => 'first_name', 'label' => 'Ім’я'],
+            ['name' => 'last_name',  'label' => 'Прізвище'],
+            ['name' => 'email',      'label' => 'Email'],
+            ['name' => 'birth_date', 'label' => 'Дата нар.', 'type' => 'date'],
+        ];
+        if ($this->isFormer()) {
+            $columns[] = ['name' => 'deleted_at', 'label' => 'Дата звільнення', 'type' => 'datetime'];
+        }
+        CRUD::addColumns($columns);
     }
 
-    /**
-     * Define what happens when the Create operation is loaded.
-     *
-     * @see https://backpackforlaravel.com/docs/crud-operation-create
-     * @return void
-     */
     protected function setupCreateOperation()
     {
         CRUD::setValidation(\App\Http\Requests\DriverRequest::class);
@@ -60,55 +75,36 @@ class DriverCrudController extends CrudController
         CRUD::field('first_name')->label('First Name');
         CRUD::field('last_name')->label('Last Name');
         CRUD::field('birth_date')->type('date')->label('Birth Date');
-        CRUD::field('salary')->type('number')->attributes(['step'=>'0.01'])->label('Salary');
+        CRUD::field('salary')->type('number')->attributes(['step' => '0.01'])->label('Salary');
         CRUD::field('email')->type('email')->label('Email');
 
+        // images должен быть table/repeatable, а не textarea
         CRUD::addField([
-            'name'   => 'images',
-            'label'  => 'Images',
-            'type'  => 'textarea',
-            'entity_singular' => 'row',
+            'name'    => 'images',
+            'label'   => 'Images',
+            'type'    => 'table', // или 'repeatable'
             'columns' => [
                 'text' => 'Text',
                 'src'  => 'Src (URL)',
             ],
-            'max' => 0,
             'min' => 0,
-        ]);
-    }
-    public function formerDrivers()
-    {
-        CRUD::setModel(\App\Models\Driver::class);
-        CRUD::setRoute(config('backpack.base.route_prefix') . '/former-drivers');
-        CRUD::setEntityNameStrings('Former driver', 'Former drivers');
-
-
-        $this->crud->addClause('onlyTrashed');
-
-        $this->crud->setColumns([
-            ['name'=>'first_name','label'=>'First Name'],
-            ['name'=>'last_name','label'=>'Last Name'],
-            ['name'=>'birth_date','label'=>'Birth Date'],
-            ['name'=>'email','label'=>'Email'],
+            'max' => 0,
         ]);
 
-        return view('crud::list', ['crud' => $this->crud]);
+        // после сохранения — на обычный список (без former)
+        $this->crud->setOperationSetting('redirectAfterSave', backpack_url('driver'));
     }
 
-
-
-
-    /**
-     * Define what happens when the Update operation is loaded.
-     *
-     * @see https://backpackforlaravel.com/docs/crud-operation-update
-     * @return void
-     */
     protected function setupUpdateOperation()
     {
         $this->setupCreateOperation();
     }
 
-
-
+    protected function setupShowOperation()
+    {
+        if ($this->isFormer()) {
+            $this->crud->query->withTrashed();
+        }
+        // при желании — определить колонки для show
+    }
 }
