@@ -28,7 +28,7 @@ class CarBrandController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request) {
-        $request->validate(['name' => 'required']);
+        $request->validate(['name' => 'required|string|max:20|unique:car_brands']);
         CarBrand::create($request->only('name'));
         return redirect()->route('car-brands.index');
     }
@@ -52,7 +52,7 @@ class CarBrandController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, CarBrand $carBrand) {
-        $request->validate(['name' => 'required']);
+        $request->validate(['name' => 'required|string|max:20|unique:car_brands']);
         $carBrand->update($request->only('name'));
         return redirect()->route('car-brands.index');
     }
